@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kobolds Labs · Test console</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="#top" aria-label="Kobolds Labs home"
+        ><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M5 25 25 5M16 26l10-10" /></svg
+        ><span>Kobolds Labs<span class="brand-sub">Test console</span></span></a
+      >
+      <nav aria-label="Console sections">
+        <a class="nav-link active" href="#top" aria-label="Overview"
+          ><span aria-hidden="true">▦</span> Overview</a
+        ><a class="nav-link" href="#messages" aria-label="Message inspector"
+          ><span aria-hidden="true">⇄</span> Message inspector</a
+        ><a class="nav-link" href="#events" aria-label="Live events"
+          ><span aria-hidden="true">≡</span> Live events</a
+        ><a class="nav-link" href="#history" aria-label="Run history"
+          ><span aria-hidden="true">◷</span> Run history</a
+        >
+      </nav>
+      <div class="sidebar-note">
+        Local test console
+        <div id="sdk-version">SDK v0.1.1</div>
+      </div>
+    </aside>
+    <main id="top">
+      <header class="topbar">
+        <div class="breadcrumb">Kobolds Labs <span>/</span> <b>Test console</b></div>
+        <div class="topbar-right">
+          <span class="local-tag">LOCAL</span><span class="session-dot" id="stream-dot"></span
+          ><span id="stream-status">Connecting to dashboard</span>
+        </div>
+      </header>
+      <section class="page-heading">
+        <h1>Broker tests</h1>
+        <div class="header-actions">
+          <button class="button subtle" id="export-json" disabled>Export JSON</button>
+        </div>
+      </section>
+      <div class="notice hidden" id="notice" role="alert"></div>
+      <section class="connection-strip">
+        <div class="connection-icon">⇄</div>
+        <div>
+          <span class="strip-label">BROKER TARGET</span>
+          <div class="mono" id="endpoint-display">tcp://127.0.0.1:7331</div>
+        </div>
+        <div class="connection-meta">
+          <span class="status-pill" id="run-state">Ready to test</span
+          ><span class="muted" id="connection-count">No test connections</span>
+        </div>
+        <div class="strip-divider"></div>
+        <div class="run-timing">
+          <span class="strip-label">ELAPSED</span><span class="mono" id="elapsed">00:00</span>
+        </div>
+      </section>
+      <section class="metrics-grid" aria-label="Live test metrics">
+        <article class="metric">
+          <span class="metric-label">MESSAGES SENT <span>↗</span></span
+          ><strong id="sent">0</strong
+          ><span class="metric-foot"><b id="sent-rate">0</b> msg / sec</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">VALID RECEIPTS <span class="mint">↙</span></span
+          ><strong id="received">0</strong
+          ><span class="metric-foot"><b id="received-rate">0</b> deliveries / sec</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">DELIVERY <span class="mint">✓</span></span
+          ><strong id="delivery">—</strong
+          ><span class="metric-foot" id="pending-label">No messages sent yet</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">P95 LATENCY <span>◷</span></span
+          ><strong id="latency">—</strong
+          ><span class="metric-foot">Submission → subscriber callback</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">BACKPRESSURE <span class="amber">≋</span></span
+          ><strong id="backpressure">0</strong
+          ><span class="metric-foot">SDK pause signals · queued messages</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">ERRORS <span class="rose">!</span></span
+          ><strong id="errors">0</strong
+          ><span class="metric-foot" id="integrity">0 invalid · 0 duplicate</span>
+        </article>
+      </section>
+      <div class="workspace-grid">
+        <div class="observations">
+          <section class="panel chart-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Message throughput</h2>
+                <p>Last 60 seconds</p>
+              </div>
+              <span class="live-label" id="chart-live"><i></i> WAITING</span>
+            </div>
+            <div class="chart-legend">
+              <span><i class="legend-dot sent-series"></i> Sent</span
+              ><span><i class="legend-dot received-series"></i> Received</span
+              ><span><i class="legend-dash"></i> Target</span
+              ><span class="chart-unit">messages / second</span>
+            </div>
+            <svg
+              id="throughput-chart"
+              class="chart"
+              viewBox="0 0 740 215"
+              role="img"
+              aria-label="Message throughput over time"
+            ></svg>
+            <div class="chart-empty" id="chart-empty">No test data.</div>
+          </section>
+          <div class="secondary-charts">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Delivery latency</h2>
+                  <p>P50 & P95 · recent 10,000 receipts</p>
+                </div>
+                <span class="chart-unit">ms</span>
+              </div>
+              <svg
+                id="latency-chart"
+                class="chart small-chart"
+                viewBox="0 0 350 150"
+                role="img"
+                aria-label="Latency over time"
+              ></svg>
+            </section>
+            <section class="panel memory-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Memory footprint</h2>
+                  <p>Process RSS, measured locally</p>
+                </div>
+              </div>
+              <div class="memory-value"><span>Test worker</span><b id="worker-memory">—</b></div>
+              <div class="memory-track"><div id="memory-bar"></div></div>
+              <div class="memory-value"><span>Broker</span><b id="broker-memory">—</b></div>
+              <div class="memory-divider"></div>
+              <div class="memory-value small">
+                <span>Worker growth this run</span><b id="memory-growth">—</b>
+              </div>
+              <p class="memory-note">
+                Worker and broker memory are separate. Broker RSS is shown when its local process
+                can be identified.
+              </p>
+            </section>
+          </div>
+        </div>
+        <section class="panel controls-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Test settings</h2>
+              <p>One active run at a time</p>
+            </div>
+          </div>
+          <form id="test-form">
+            <label class="field-label">TEST PROFILE</label>
+            <div class="profile-grid">
+              <button type="button" class="profile selected" data-mode="quick">
+                <b>Quick check</b><small>10 sec · 5 msg/s</small></button
+              ><button type="button" class="profile" data-mode="soak">
+                <b>Soak test</b><small>30 min · 10 msg/s</small></button
+              ><button type="button" class="profile" data-mode="stress">
+                <b>Stress test</b><small>Ramp to 250 msg/s</small></button
+              ><button type="button" class="profile" data-mode="custom">
+                <b>Custom</b><small>Manual settings</small>
+              </button>
+            </div>
+            <p class="profile-description" id="profile-description">
+              Short run with payload validation.
+            </p>
+            <label for="endpoint">Broker address</label
+            ><input
+              id="endpoint"
+              name="endpoint"
+              value="tcp://127.0.0.1:7331"
+              required
+              spellcheck="false"
+              class="mono"
+            />
+            <label for="topic-prefix">Topic prefix</label
+            ><input
+              id="topic-prefix"
+              value="/kobolds-labs"
+              required
+              spellcheck="false"
+              class="mono"
+            /><small class="field-hint"
+              >Each run gets its own topic, removed after a clean finish.</small
+            >
+            <div class="field-pair">
+              <div>
+                <label for="rate">Target rate <span>msg/s total</span></label
+                ><input
+                  id="rate"
+                  type="number"
+                  min="0.1"
+                  max="2000"
+                  step="0.1"
+                  value="5"
+                  required
+                />
+              </div>
+              <div>
+                <label for="duration">Duration <span>seconds</span></label
+                ><input id="duration" type="number" min="1" max="86400" value="10" required />
+              </div>
+            </div>
+            <div class="field-pair">
+              <div>
+                <label for="payload">Payload <span>bytes</span></label
+                ><input id="payload" type="number" min="256" max="32768" value="512" required />
+              </div>
+              <div>
+                <label for="ramp">Ramp-up <span>seconds</span></label
+                ><input id="ramp" type="number" min="0" value="0" required />
+              </div>
+            </div>
+            <details class="advanced">
+              <summary>Client & message options <span>+</span></summary>
+              <div class="field-pair">
+                <div>
+                  <label for="publishers">Publishers</label
+                  ><input id="publishers" type="number" min="1" max="4" value="1" required />
+                </div>
+                <div>
+                  <label for="subscribers">Subscribers</label
+                  ><input id="subscribers" type="number" min="1" max="4" value="1" required />
+                </div>
+              </div>
+              <label for="message-text">Message text</label
+              ><input id="message-text" value="Kobolds Labs test message" maxlength="100" />
+            </details>
+            <div class="test-estimate" id="estimate">About 50 messages · 25 KiB payload data</div>
+            <button class="button primary start-button" id="start-button" type="submit">
+              Start test
+            </button>
+            <div class="run-actions">
+              <button class="button stop-button" id="stop-button" type="button" disabled>
+                Stop test</button
+              ><button class="button subtle" id="send-button" type="button" disabled>
+                Send one
+              </button>
+            </div>
+            <p class="control-footnote">
+              The broker must already be running. Stress tests may expose crashes in prerelease
+              software.
+            </p>
+          </form>
+        </section>
+      </div>
+      <section class="panel run-progress">
+        <div>
+          <span id="progress-title">No active test</span
+          ><span id="progress-detail">Start a test to collect data.</span>
+        </div>
+        <div class="progress-track"><div id="progress-bar"></div></div>
+        <span class="mono" id="progress-percent">0%</span>
+      </section>
+      <section class="panel inspector" id="messages">
+        <div class="panel-heading">
+          <div>
+            <h2>Message inspector <span class="counter" id="message-counter">0</span></h2>
+            <p>Sampled payloads · all receipts are validated</p>
+          </div>
+          <button class="button tiny" id="pause-messages">Pause view</button>
+        </div>
+        <div class="inspector-grid">
+          <div class="table-scroll">
+            <table class="message-table">
+              <thead>
+                <tr>
+                  <th>SEQUENCE</th>
+                  <th>SUBSCRIBER</th>
+                  <th>SIZE</th>
+                  <th>LATENCY</th>
+                  <th>RECEIVED</th>
+                </tr>
+              </thead>
+              <tbody id="message-rows">
+                <tr>
+                  <td colspan="5" class="empty-cell">No receipts.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="payload-view">
+            <div><span>PAYLOAD PREVIEW</span><span class="json-label">JSON</span></div>
+            <pre id="payload-preview">
+// Select a receipt to inspect its payload.
+// Previews are limited to 700 characters.</pre>
+          </div>
+        </div>
+      </section>
+      <div class="bottom-grid">
+        <section class="panel events-panel" id="events">
+          <div class="panel-heading">
+            <div>
+              <h2>Live events</h2>
+              <p>Test lifecycle, connections, and SDK diagnostics</p>
+            </div>
+            <select id="event-filter" aria-label="Filter events">
+              <option value="all">All events</option>
+              <option value="issues">Warnings & errors</option>
+              <option value="error">Errors only</option>
+            </select>
+          </div>
+          <div class="event-list" id="event-list"><div class="empty-events">No events.</div></div>
+        </section>
+        <section class="panel history-panel" id="history">
+          <div class="panel-heading">
+            <div>
+              <h2>Run history</h2>
+              <p>Latest 30 tests</p>
+            </div>
+            <span class="counter" id="history-counter">0</span>
+          </div>
+          <div id="history-list" class="history-list">
+            <div class="empty-history"><p>No completed runs.</p></div>
+          </div>
+        </section>
+      </div>
+      <footer><span>Kobolds Labs</span><button id="export-csv" disabled>Export CSV</button></footer>
+    </main>
+    <div class="toast hidden" id="toast" role="status"></div>
+  </body>
+</html>
